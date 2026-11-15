@@ -661,6 +661,12 @@ details.id-mini .panel{border:0;padding:8px 0 0;margin:0;box-shadow:none;backgro
 .v-stage{margin:.5rem 0}
 .v-load{display:inline-flex;align-items:center;gap:6px}
 .v-load svg{width:18px;height:18px}
+.v-thumb{position:relative;display:block;max-width:560px;border-radius:var(--r-m);overflow:hidden;border:1px solid var(--line);text-decoration:none}
+.v-thumb img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.v-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:#1f1d1b;color:#fff;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.v-play svg{width:18px;height:18px}
+.v-thumb:hover .v-play,.v-thumb:focus-visible .v-play{background:#000}
+.v-note{margin:.4rem 0 0;font-size:.9em;color:var(--ink-2)}
 .embed{position:relative;width:100%;aspect-ratio:16/9;border-radius:var(--r-m);overflow:hidden;background:#000;border:1px solid var(--line)}
 .embed.r43{aspect-ratio:4/3}.embed.r11{aspect-ratio:1/1}
 .embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
@@ -886,7 +892,7 @@ window.COURSE={"day":1707,"file":"UD2_Informacion_profesional.html","langs":["es
       idDone: "Identificació",
       part: "Part", timerStart: "Inicia", timerPause: "Pausa", timerReset: "Reinicia", timerAria: "Temps restant de la part", partPlan: "Planificació de la part", secTime: "Temps a l'aula",
       statement: "Enunciat", criteria: "Resultat d'aprenentatge i criteris d'avaluació", embedOpen: "Obre l'activitat en una pestanya nova", embedPending: "El docent encara no ha publicat l'activitat interactiva. Quan estigui disponible apareixerà aquí.",
-      vidLoad: "Mira el vídeo aquí", vidMoment: "Quan s'ha de veure",
+      vidLoad: "Mira el vídeo aquí", vidExt: "Mira el vídeo a YouTube", vidLocal: "Has obert la web des de l'ordinador: YouTube només deixa reproduir el vídeo dins la pàgina quan la web està publicada. S'obrirà en una pestanya nova.", vidMoment: "Quan s'ha de veure",
       mailBtn: "ENVIAR PER CORREU", mailTitle: "Enviar l'informe al docent", mailTo: "Destinatari", mailDirect: "Enviar ara al docent", mailSending: "Enviant…",
       mailSent: "Informe enviat al docent.", mailFail: "No s'ha pogut enviar directament. Utilitza una de les altres opcions.",
       mailGmail: "Obrir Gmail amb el correu preparat", mailApp: "Obrir el meu programa de correu",
@@ -955,7 +961,7 @@ window.COURSE={"day":1707,"file":"UD2_Informacion_profesional.html","langs":["es
       idDone: "Identificación",
       part: "Parte", timerStart: "Iniciar", timerPause: "Pausa", timerReset: "Reiniciar", timerAria: "Tiempo restante de la parte", partPlan: "Planificación de la parte", secTime: "Tiempo en el aula",
       statement: "Enunciado", criteria: "Resultado de aprendizaje y criterios de evaluación", embedOpen: "Abrir la actividad en una pestaña nueva", embedPending: "El docente todavía no ha publicado la actividad interactiva. Cuando esté disponible aparecerá aquí.",
-      vidLoad: "Ver el vídeo aquí", vidMoment: "Cuándo verlo",
+      vidLoad: "Ver el vídeo aquí", vidExt: "Ver el vídeo en YouTube", vidLocal: "Has abierto la web desde el ordenador: YouTube solo deja reproducir el vídeo dentro de la página cuando la web está publicada. Se abrirá en una pestaña nueva.", vidMoment: "Cuándo verlo",
       mailBtn: "ENVIAR POR CORREO", mailTitle: "Enviar el informe al docente", mailTo: "Destinatario", mailDirect: "Enviar ahora al docente", mailSending: "Enviando…",
       mailSent: "Informe enviado al docente.", mailFail: "No se ha podido enviar directamente. Usa una de las otras opciones.",
       mailGmail: "Abrir Gmail con el correo preparado", mailApp: "Abrir mi programa de correo",
@@ -2105,7 +2111,16 @@ window.COURSE={"day":1707,"file":"UD2_Informacion_profesional.html","langs":["es
   function ytId(u) { var m = String(u || "").match(/(?:youtu\.be\/|[?&]v=|embed\/)([\w-]{11})/); return m ? m[1] : null; }
   function videoBox(v, key) {
     var yid = ytId(T(v.url)), stage = null;
-    if (yid) {
+    // Abierta con doble clic (file://) o en una vista previa sin origen, YouTube no reproduce el vídeo
+    // insertado (error 153: falta el origen de la página). En ese caso se muestra la miniatura que abre YouTube.
+    var noOrigin = !/^https?:$/.test(location.protocol) || window.origin === "null";
+    if (yid && noOrigin) {
+      stage = h("div", { class: "v-stage" },
+        h("a", { class: "v-thumb", href: T(v.url), target: "_blank", rel: "noopener noreferrer", "aria-label": t("vidExt") + ": " + T(v.title) },
+          h("img", { src: "https://i.ytimg.com/vi/" + yid + "/hqdefault.jpg", alt: "", loading: "lazy" }),
+          h("span", { class: "v-play" }, icon("play"), t("vidExt"))),
+        h("p", { class: "v-note" }, t("vidLocal")));
+    } else if (yid) {
       stage = h("div", { class: "v-stage" });
       stage.appendChild(h("button", { type: "button", class: "btn v-load", onclick: function () {
         stage.innerHTML = "";
@@ -2153,7 +2168,7 @@ window.COURSE={"day":1707,"file":"UD2_Informacion_profesional.html","langs":["es
           h("ul", null, (c.ce || []).map(function (x) { return h("li", null, h("b", null, x[0]), " ", T(x[1])); }))));
       });
     }
-    if (a.embed) box.appendChild(embedBox(a.embed));
+    if (a.embed) [].concat(a.embed).forEach(function (e) { box.appendChild(embedBox(e)); }); // uno o varios juegos
     if (a.links) box.appendChild(node({ t: "links", title: a.links.title, items: a.links.items }));
     return box;
   }
